@@ -8,6 +8,7 @@ A Mod for the game Elin which allows for automatically setting character portrai
 Steam Workshop:
 YK Framework -> YKFramework.dll
 
+```
 Elin/Elin_Data/Managed
 ├─── Elin.dll
 ├─── Plugins.ActorSystem.dll
@@ -20,9 +21,12 @@ Elin/Elin_Data/Managed
 ├─── UnityEngine.UIModule.dll
 ├─── UnityEngine.InputLegacyModule.dll
 ├─── UnityEngine.TextRenderingModule.dll
+```
 
+```
 Elin/BepinEx/core
 ├─── 0Harmony.dll
 ├─── BepInEx.Core.dll
 ├─── BepInEx.Unity.dll
+```
 
