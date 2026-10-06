@@ -15,38 +15,11 @@
     <Reference Include="BepInEx.Core">
       <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\BepInEx.Core.dll</HintPath>
     </Reference>
-    <Reference Include="BepInEx.Preloader.Core">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\BepInEx.Preloader.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="BepInEx.Preloader.Unity">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\BepInEx.Preloader.Unity.dll</HintPath>
-    </Reference>
     <Reference Include="BepInEx.Unity">
       <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\BepInEx.Unity.dll</HintPath>
     </Reference>
-    <Reference Include="com.rlabrecque.steamworks.net">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\com.rlabrecque.steamworks.net.dll</HintPath>
-    </Reference>
     <Reference Include="Elin">
       <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\Elin.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\Mono.Cecil.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil.Mdb">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\Mono.Cecil.Mdb.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil.Pdb">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\Mono.Cecil.Pdb.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil.Rocks">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\Mono.Cecil.Rocks.dll</HintPath>
-    </Reference>
-    <Reference Include="MonoMod.RuntimeDetour">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\MonoMod.RuntimeDetour.dll</HintPath>
-    </Reference>
-    <Reference Include="MonoMod.Utils">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\MonoMod.Utils.dll</HintPath>
     </Reference>
     <Reference Include="Plugins.ActorSystem">
       <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\Plugins.ActorSystem.dll</HintPath>
@@ -62,9 +35,6 @@
     </Reference>
     <Reference Include="Plugins.UI">
       <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\Plugins.UI.dll</HintPath>
-    </Reference>
-    <Reference Include="SemanticVersioning">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\SemanticVersioning.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\UnityEngine.dll</HintPath>
@@ -97,8 +67,8 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy /y &quot;$(TargetDir)SpecificPortraits.dll&quot; &quot;F:\SteamLibrary\steamapps\common\Elin\Package\Mod_Specific_Portraits&quot;" />
-  </Target>
-
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Exec Command="copy /y &quot;$(TargetDir)SpecificPortraits.dll&quot; &quot;F:\SteamLibrary\steamapps\common\Elin\Package\Mod_Specific_Portraits&quot;" />
+	</Target>
+	
 </Project>

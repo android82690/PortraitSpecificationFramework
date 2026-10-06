@@ -1,22 +1,13 @@
-﻿using BepInEx.Logging;
-using HarmonyLib;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
 using SpecificPortraits.UI;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using UnityEngine;
-using UnityEngine.Assertions.Must;
 using UnityEngine.UI;
 using YKF;
-using static Check;
-using static MapPiece;
 
 namespace SpecificPortraits
 {
