@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -66,9 +66,5 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
-
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="copy /y &quot;$(TargetDir)SpecificPortraits.dll&quot; &quot;F:\SteamLibrary\steamapps\common\Elin\Package\Mod_Specific_Portraits&quot;" />
-	</Target>
 	
 </Project>
