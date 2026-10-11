@@ -1,4 +1,4 @@
-﻿using YKF;
+using YKF;
 using UnityEngine;
 
 namespace SpecificPortraits.UI
@@ -16,16 +16,20 @@ namespace SpecificPortraits.UI
             gridLayout.Toggle("「ポートレートの再ロール」ダイアログオプションを有効にする"._("Enable \"Reroll Portrait\" dialog option"), SpecificPortraits.EnableRerollDialog.Value, isOn =>
             {
                 SpecificPortraits.EnableRerollDialog.Value = isOn;
-
             });
 
             YKGrid forceVanillaLayout = scrollLayout.Grid();
-            //forceVanillaLayout.Rect().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 50f);
             forceVanillaLayout.Layout.cellSize = new Vector2(400f, 40f);
             forceVanillaLayout.Toggle("常にバニラポートレートを含める"._("Always include vanilla portraits"), SpecificPortraits.AlwaysIncludeVanillaPortraits.Value, isOn =>
             {
                 SpecificPortraits.AlwaysIncludeVanillaPortraits.Value = isOn;
+            });
 
+            YKGrid randomizeLayout = scrollLayout.Grid();
+            randomizeLayout.Layout.cellSize = new Vector2(400f, 40f);
+            randomizeLayout.Toggle("一致するプールがない場合はランダムに選ぶ"._("Random portrait when no pool matches"), SpecificPortraits.RandomizePortraitOnNoResults.Value, isOn =>
+            {
+                SpecificPortraits.RandomizePortraitOnNoResults.Value = isOn;
             });
         }
     }

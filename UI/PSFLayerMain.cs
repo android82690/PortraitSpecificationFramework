@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using YKF;
 
 namespace SpecificPortraits.UI
@@ -7,11 +7,31 @@ namespace SpecificPortraits.UI
     {
         public override string Title { get; } = "ポートレート ツール"._("Portrait Tools");
         public override Rect Bound { get; } = new Rect(0.0f, 0.0f, 1400f, 800f);
+
         public override void OnLayout()
         {
             CreateTab<TabPicker>("ポートレートセレクター"._("Portrait Picker"), "psf.tool.picker");
             CreateTab<TabPools>("ポートレートセット"._("Portrait Pool Links"), "psf.tool.pools");
             CreateTab<TabSettings>("設定"._("Settings"), "psf.tool.settings");
+        }
+
+        /// <summary>Closing with unsaved pool edits asks whether to keep them.</summary>
+        public override void OnKill()
+        {
+            if (LinkFiles.Dirty.Count > 0)
+            {
+                Dialog.YesNo("ポートレートプールの変更を保存しますか？"._("Save the portrait pool changes?"),
+                    () =>
+                    {
+                        int saved = LinkFiles.SaveAll();
+                        Msg.SayRaw(Lang.isJP ? "ポートレートプールを保存しました。" : $"Portrait pools saved ({saved}).");
+                    },
+                    () =>
+                    {
+                        LinkFiles.ReloadAll();
+                    });
+            }
+            base.OnKill();
         }
     }
 }

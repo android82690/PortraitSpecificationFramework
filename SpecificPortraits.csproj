@@ -1,70 +1,46 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>SpecificPortraits</AssemblyName>
+    <RootNamespace>SpecificPortraits</RootNamespace>
+    <LangVersion>preview</LangVersion>
+    <Nullable>disable</Nullable>
+    <Version>0.11.1</Version>
+    <DebugType>none</DebugType>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    <!-- Game install: -p:ElinDir=..., or the ELIN_DIR environment variable, else the default Steam location. -->
+    <ElinDir Condition="'$(ElinDir)' == '' And '$(ELIN_DIR)' != ''">$(ELIN_DIR)</ElinDir>
+    <ElinDir Condition="'$(ElinDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Elin</ElinDir>
+    <!-- Steam Workshop content for Elin (YK Framework 3400020753, Mod Options 3381182341): -p:WorkshopDir=..., ELIN_WORKSHOP_DIR, or the default next to the game. -->
+    <WorkshopDir Condition="'$(WorkshopDir)' == '' And '$(ELIN_WORKSHOP_DIR)' != ''">$(ELIN_WORKSHOP_DIR)</WorkshopDir>
+    <WorkshopDir Condition="'$(WorkshopDir)' == ''">$(ElinDir)\..\..\workshop\content\2135150</WorkshopDir>
+    <Managed>$(ElinDir)\Elin_Data\Managed</Managed>
+    <BepCore>$(ElinDir)\BepInEx\core</BepCore>
   </PropertyGroup>
-  <PropertyGroup>
-   <LangVersion>preview</LangVersion>
-  </PropertyGroup>
-
 
   <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\0Harmony.dll</HintPath>
-    </Reference>
-    <Reference Include="BepInEx.Core">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\BepInEx.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="BepInEx.Unity">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\BepInEx\core\BepInEx.Unity.dll</HintPath>
-    </Reference>
-    <Reference Include="Elin">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\Elin.dll</HintPath>
-    </Reference>
-    <Reference Include="Plugins.ActorSystem">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\Plugins.ActorSystem.dll</HintPath>
-    </Reference>
-    <Reference Include="Plugins.BaseCore">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\Plugins.BaseCore.dll</HintPath>
-    </Reference>
-    <Reference Include="Plugins.Modding">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\Plugins.Modding.dll</HintPath>
-    </Reference>
-    <Reference Include="Plugins.Sound">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\Plugins.Sound.dll</HintPath>
-    </Reference>
-    <Reference Include="Plugins.UI">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\Plugins.UI.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\UnityEngine.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.TextRenderingModule">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.UI">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\UnityEngine.UI.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.UIModule">
-      <HintPath>F:\SteamLibrary\steamapps\common\Elin\Elin_Data\Managed\UnityEngine.UIModule.dll</HintPath>
-    </Reference>
-    <Reference Include="YKFramework">
-      <HintPath>F:\SteamLibrary\steamapps\workshop\content\2135150\3400020753\YKFramework.dll</HintPath>
-    </Reference>
+    <Reference Include="Elin"><HintPath>$(Managed)\Elin.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Plugins.ActorSystem"><HintPath>$(Managed)\Plugins.ActorSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Plugins.BaseCore"><HintPath>$(Managed)\Plugins.BaseCore.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Plugins.Modding"><HintPath>$(Managed)\Plugins.Modding.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Plugins.Sound"><HintPath>$(Managed)\Plugins.Sound.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Plugins.UI"><HintPath>$(Managed)\Plugins.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(Managed)\Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(Managed)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(Managed)\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(Managed)\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(Managed)\UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(Managed)\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(Managed)\UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx.Core"><HintPath>$(BepCore)\BepInEx.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx.Unity"><HintPath>$(BepCore)\BepInEx.Unity.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepCore)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <!-- Optional in-game config menu (Mod Options, workshop 3381182341); build-only, every call is guarded. -->
+    <Reference Include="ModOptions"><HintPath>$(WorkshopDir)\3381182341\ModOptions.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="YKFramework"><HintPath>$(WorkshopDir)\3400020753\YKFramework.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Properties\PublishProfiles\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-  </ItemGroup>
-	
 </Project>

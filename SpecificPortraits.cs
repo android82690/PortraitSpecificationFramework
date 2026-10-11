@@ -1,32 +1,43 @@
-﻿using BepInEx;
+using BepInEx;
 using BepInEx.Configuration;
+using BepInEx.Logging;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using UnityEngine;
 using System.Linq;
+using System.Text.RegularExpressions;
+using UnityEngine;
 
 namespace SpecificPortraits
 {
     [BepInPlugin(pluginGuid, pluginName, pluginVersion)]
-    class SpecificPortraits : BaseUnityPlugin
+    [BepInDependency("jp.cmbc.mod.elin.yk-framework", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("evilmask.elinplugins.modoptions", BepInDependency.DependencyFlags.SoftDependency)]
+    public class SpecificPortraits : BaseUnityPlugin
     {
         public const string pluginGuid = "SpecificPortraits";
         public const string pluginName = "Specific Portraits";
-        public const string pluginVersion = "0.8";
+        public const string pluginVersion = "0.11.1";
 
+        /// <summary>Local package that keeps the player's pool links across updates of this mod.</summary>
+        public const string SettingsPackageName = "Mod_Specific_Portraits_Settings";
+        public const string SettingsPackageId = "android_specific_portraits_settings";
+        public const string LinkFileName = "PSFLinks.json";
+        public const string LegacyLinkFileName = "portrait_specification_framework_links.txt";
+
+        public static ManualLogSource Log;
+        public static Harmony harmony;
+
+        /// <summary>Activated packages that ship portraits or pool links.</summary>
         public static List<BaseModPackage> loadedModPackages = new List<BaseModPackage>();
-
-        public static string PersonalSettingsLocation = "Package/Mod_Specific_Portraits_Settings";
-
-        public static Harmony harmony = null;
-        public static Dictionary<string, Sprite> spriteListData = new Dictionary<string, Sprite>();
+        /// <summary>Portrait files per package folder name. Sprites load on first display, not at startup.</summary>
         public static Dictionary<string, ModItemList<Sprite>> spriteListDataByMod = new Dictionary<string, ModItemList<Sprite>>();
 
-        public static Dictionary<int, PortraitPoolTag> PortraitPoolTags = new Dictionary<int, PortraitPoolTag>();
-        public static Dictionary<int, PortraitPoolTag> InferredPortraitPoolTags = new Dictionary<int, PortraitPoolTag>();
-        //public static Dictionary<string, Dictionary<int, PortraitPoolTag>> PortraitPoolTagsByMod = new Dictionary<string, Dictionary<int, PortraitPoolTag>>();
+        /// <summary>Pools defined in link files or the in-game editor, by <see cref="PortraitPoolTag.Key"/>.</summary>
+        public static Dictionary<string, PortraitPoolTag> PortraitPoolTags = new Dictionary<string, PortraitPoolTag>();
+        /// <summary>Pools inferred from file names such as c_f-xxx or guard_m-xxx, by key.</summary>
+        public static Dictionary<string, PortraitPoolTag> InferredPortraitPoolTags = new Dictionary<string, PortraitPoolTag>();
 
         public const string allText = "all";
         public const string allTextJP = "すべて";
@@ -35,100 +46,139 @@ namespace SpecificPortraits
 
         public static ConfigEntry<bool> EnableRerollDialog { get; set; }
         public static ConfigEntry<bool> AlwaysIncludeVanillaPortraits { get; set; }
-
         public static ConfigEntry<bool> RandomizePortraitOnNoResults { get; set; }
+        /// <summary>The plugin object; hosts coroutines that must outlive hidden UI tabs.</summary>
+        public static SpecificPortraits Instance { get; private set; }
+
+        /// <summary>The active map, or null on the title screen (the game's own accessor throws there).</summary>
+        public static Map CurrentMap => EClass.core?.game?.activeZone?.map;
+
+        public static string PackageRoot => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Package"));
+        public static string SettingsPackagePath => Path.Combine(PackageRoot, SettingsPackageName);
 
         public void Awake()
         {
+            Log = Logger;
+            Instance = this;
+
             RandomizePortraitOnNoResults = Config.Bind("Portrait Specification Framework",
                 "RandomizePortraitOnNoResults",
                 false,
-                "If true and no overrides are set randomizes portrait from all vanilla loaded portraits, else falls back to vanilla");
+                "Characters with no matching pool get a random portrait.\n" +
+                "Picks from every loaded portrait of their gender and type.\n" +
+                "Off: those characters keep the game's own choice.");
 
             EnableRerollDialog = Config.Bind("Portrait Specification Framework",
                 "EnableRerollDialog",
                 false,
-                "Enables legacy reroll option within character drama dialog, false by default");
+                "Adds a \"Reroll your portrait\" line to NPC dialogue.\n" +
+                "Not shown for unique characters.");
 
             AlwaysIncludeVanillaPortraits = Config.Bind("Always Include Vanilla Portraits",
                 "MinimumPortraitsWhenMatched",
                 false,
-                "When true; this option will make vanilla portraits available for selection on all corresponding male/female pools. When false; vanilla portraits will only be used as defaults when no modded portraits are present");
+                "Mix the game's default portraits into every pool.\n" +
+                "On: default portraits can be picked alongside linked ones.\n" +
+                "Off: default portraits are only used when no pool matches.");
 
-            //create separate mod for persistent settings
-            if (!Directory.Exists(PersonalSettingsLocation))
-            {
-                Directory.CreateDirectory(PersonalSettingsLocation);
-
-                File.WriteAllText(Path.Combine(PersonalSettingsLocation, "package.xml"),
-                    @"<?xml version=""1.0"" encoding=""utf-8""?>
-<Meta>
-  <title>Portrait Specification Framework Local Settings</title>
-  <id>android_specific_portraits_settings</id>
-  <author>Android</author>
-  <loadPriority>999</loadPriority>
-  <description>
-  Settings mod for PSF, it persists through updates of the main mod so people don't lose their settings
-  </description>
-  <version>0.23.74</version>
-</Meta>");
-
-                File.WriteAllText(Path.Combine(PersonalSettingsLocation, "PSFLinks.json"), "{\"Version\":3,\"PoolsByPortrait\":{},\"Tags\":[]}");
-            }
+            EnsureSettingsPackage();
 
             harmony = new Harmony(pluginGuid);
 
-            //override elin set portrait method to use this one instead (defaults to base game method on failure)
+            // Portrait selection for new characters (falls back to the game's picker when nothing matches).
             harmony.Patch(AccessTools.Method(typeof(Biography), nameof(Biography.SetPortrait)),
                 new HarmonyMethod(AccessTools.Method(typeof(PortraitPatch), nameof(PortraitPatch.SetPortraitPrefix))));
 
-            //populate portrait dictionaries at game start from vanilla and other mods once they have been loaded
+            // Collect portraits and pool links once the game has loaded every package.
             harmony.Patch(AccessTools.Method(typeof(Core), nameof(Core.Init)),
-               postfix: new HarmonyMethod(AccessTools.Method(typeof(PortraitPatch), nameof(PortraitPatch.InitPostfix))));
+                postfix: new HarmonyMethod(AccessTools.Method(typeof(PortraitPatch), nameof(PortraitPatch.InitPostfix))));
 
-            //responsible for assigning portraits for characters without portraits on map load, things like fairies, animals, enemies, etc.
+            // Characters the game never gives a portrait (animals, monsters) get one on zone entry when a pool matches.
             harmony.Patch(AccessTools.Method(typeof(Player.Flags), nameof(Player.Flags.OnEnterZone)),
-               new HarmonyMethod(AccessTools.Method(typeof(PortraitPatch), nameof(PortraitPatch.OnEnterZonePrefix))));
+                new HarmonyMethod(AccessTools.Method(typeof(PortraitPatch), nameof(PortraitPatch.OnEnterZonePrefix))));
 
-            //adds button to tools menu
-            harmony.Patch(AccessTools.Method(typeof(UIContextMenu), nameof(UIContextMenu.AddButton), parameters: new Type[] { typeof(string), typeof(Action), typeof(bool) }),
-               new HarmonyMethod(AccessTools.Method(typeof(PortraitPatch), nameof(PortraitPatch.AddButtonPrefix))));
-
-            //adds portrait reroll option based on flag
+            // Optional reroll line in dialogue, and element tint for "+color" portraits.
             harmony.Patch(AccessTools.Method(typeof(DramaActor), nameof(DramaActor.Talk)),
-                new HarmonyMethod(AccessTools.Method(typeof(PortraitPatch), nameof(PortraitPatch.TalkPrefix))));
-
-            //applies portrait color overlay settings based on element for things like fire hounds
-            harmony.Patch(AccessTools.Method(typeof(DramaActor), nameof(DramaActor.Talk)), null,
+                new HarmonyMethod(AccessTools.Method(typeof(PortraitPatch), nameof(PortraitPatch.TalkPrefix))),
                 new HarmonyMethod(AccessTools.Method(typeof(PortraitPatch), nameof(PortraitPatch.TalkPostfix))));
 
-            Logger.LogMessage("Portrait Specification Framework Loaded");
+            ModOptionsIntegration.TryRegister();
+
+            Log.LogMessage("Portrait Specification Framework Loaded");
         }
 
-        public static void Patch(Type originalClass, string originalMethodName, Type patchClass, string patchMethodName, Type[] originalParameters = null, Type[] patchParameters = null)
+        /// <summary>Create the local settings package on first run so pool links survive mod updates.</summary>
+        public static void EnsureSettingsPackage(string gameVersion = "0.23.352")
         {
-            harmony.Patch(AccessTools.Method(originalClass, originalMethodName, parameters: originalParameters),
-               new HarmonyMethod(AccessTools.Method(patchClass, patchMethodName)));
-        }
+            try
+            {
+                var dir = SettingsPackagePath;
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
 
-        public static void Unpatch(Type originalClass, string originalMethodName, Type patchClass, string patchMethodName, Type[] originalParameters = null, Type[] patchParameters = null)
-        {
-            harmony.Unpatch(AccessTools.Method(originalClass, originalMethodName, parameters: originalParameters),
-               AccessTools.Method(patchClass, patchMethodName));
-        }
+                var meta = Path.Combine(dir, "package.xml");
+                if (!File.Exists(meta))
+                    File.WriteAllText(meta, SettingsPackageXml(gameVersion));
 
-        public static void LoadAllPortraitSprites()
-        {
-            try {
-                for (int i = 0; i < Portrait.modPortraits.list.Count; i++)
-                {
-                    var sprite = Portrait.modPortraits.list[i];         
-                    spriteListData.Add(sprite.id, sprite.GetObject());
-                }
+                var links = Path.Combine(dir, LinkFileName);
+                if (!File.Exists(links))
+                    File.WriteAllText(links, "{\"Version\":3,\"PoolsByPortrait\":{},\"Tags\":[]}");
             }
-            catch(Exception ex) {
-                Console.WriteLine($"[PortraitSpecificationFramework] LOADING PORTRAIT SPRITES FAILED, UNRECOVERABLE ERROR: {ex.Message}");
+            catch (Exception ex)
+            {
+                Log.LogWarning($"Could not prepare the settings package: {ex.Message}");
             }
+        }
+
+        static string SettingsPackageXml(string gameVersion)
+        {
+            return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                "<Meta>\n" +
+                "  <title>Portrait Specification Framework Local Settings</title>\n" +
+                $"  <id>{SettingsPackageId}</id>\n" +
+                "  <author>Android</author>\n" +
+                "  <loadPriority>999</loadPriority>\n" +
+                "  <description>\n" +
+                "  Settings mod for PSF, it persists through updates of the main mod so people don't lose their settings\n" +
+                "  </description>\n" +
+                $"  <version>{gameVersion}</version>\n" +
+                "</Meta>";
+        }
+
+        /// <summary>
+        /// The game skips packages whose version is older than its minimum mod version.
+        /// Rewrite the settings package version to the running game when that happens.
+        /// </summary>
+        public static void RefreshSettingsPackageVersion(Core core)
+        {
+            try
+            {
+                var package = core.mods.packages.FirstOrDefault(p => p.dirInfo != null && p.dirInfo.Name == SettingsPackageName);
+                if (package == null || package.IsValidVersion())
+                    return;
+
+                var v = core.version;
+                var current = $"{v.major}.{v.minor}.{v.batch}";
+                var meta = Path.Combine(package.dirInfo.FullName, "package.xml");
+                var text = File.ReadAllText(meta);
+                text = Regex.Replace(text, "<version>[^<]*</version>", $"<version>{current}</version>");
+                File.WriteAllText(meta, text);
+                Log.LogWarning($"The settings package was skipped by the game (made for {package.version}). " +
+                    $"Its version is now {current}; saved pool links load again on the next launch.");
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning($"Could not update the settings package version: {ex.Message}");
+            }
+        }
+
+        /// <summary>Portrait sprite by id, loaded on first use. Null when the id is unknown.</summary>
+        public static Sprite GetSprite(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                return null;
+            var item = Portrait.modPortraits.GetItem(id, returnNull: true);
+            return item?.GetObject();
         }
 
         public static PortraitPoolTag ResolvePoolTagFromString(string tagString, string modID = null, string[] includeTypeList = null)
@@ -159,12 +209,12 @@ namespace SpecificPortraits
                 var potentialRace = EClass.sources.races.rows.Where(r => potentialIds.Contains(r.id)).Select(r => r.id).FirstOrDefault();
                 var potentialJob = EClass.sources.jobs.rows.Where(r => potentialIds.Contains(r.id)).Select(r => r.id).FirstOrDefault();
                 var potentialCard = EClass.sources.cards.rows.Where(r => potentialIds.Contains(r.id)).Select(r => r.id).FirstOrDefault();
-                
-                //attempt to find matches with any 2 consecutive elements like citizen_fairy or horse_yowyn
-                if((potentialCard == null || potentialCard == potentialRace) && potentialIds.Length >= 2)
+
+                // Try any two consecutive parts as one id, like citizen_fairy or horse_yowyn.
+                if ((potentialCard == null || potentialCard == potentialRace) && potentialIds.Length >= 2)
                 {
                     var potentialLongIDs = new List<string>();
-                    for(int i = 0; i < potentialIds.Length-1; i++)
+                    for (int i = 0; i < potentialIds.Length - 1; i++)
                     {
                         potentialLongIDs.Add($"{potentialIds[i]}_{potentialIds[i + 1]}");
                     }
@@ -178,16 +228,12 @@ namespace SpecificPortraits
                 if (potentialCard != null)
                     tag.CardID = potentialCard;
 
-                //handle fairy, there are entries for "fairy" in both the race table and id table so default to just race if equal
+                // "fairy" is both a race and a card id; treat it as the race.
                 if (tag.CardID == tag.Race)
                     tag.CardID = "all";
             }
 
             return tag;
-
         }
-
     }
-
-    
 }
